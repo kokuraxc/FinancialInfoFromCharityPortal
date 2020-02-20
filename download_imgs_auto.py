@@ -8,6 +8,9 @@ import urllib.request
 
 
 def download_imgs(urls, folder_name):
+    '''
+    Given a list of image URLs, download them to the folder folder_name.
+    '''
     os.mkdir(folder_name)
     for i in range(len(urls)):
         file_name = urls[i].split('/')[-1].replace('%20', ' ')
@@ -16,6 +19,10 @@ def download_imgs(urls, folder_name):
 
 
 def process_temple(temple_name):
+    '''
+    Search for the temple_name in the Charity Portal.
+    Proceed to download the PDF images.
+    '''
     searchField = driver.find_element_by_id("ctl00_PlaceHolderMain_txtSearch")
     searchField.clear()
     searchField.send_keys(temple_name)
@@ -45,6 +52,7 @@ def process_temple(temple_name):
     print(fiTab.text)
     fiTab.click()
 
+    # dismiss the alert pormpt
     driver.switch_to.alert.accept()
 
     # click on "Financial Information" again
@@ -52,6 +60,9 @@ def process_temple(temple_name):
     print(fiTab.text)
     fiTab.click()
 
+    # # Initially I want to handle the SingPass login page automatically, but then decided it
+    # # doesn't worth the efforts, as I only need to login once for the first time to view
+    # # the details of the financial information
     # # handle alert
     # try:
     #     WebDriverWait(driver, 2).until(EC.alert_is_present(),
@@ -81,8 +92,6 @@ def process_temple(temple_name):
     # another windows will pop up
     driver.switch_to.window(driver.window_handles[2])
 
-    # for img in driver.find_elements_by_tag_name('img'):
-    #     print(img.get_attribute("src"))
     # get the pdf imgs' urls
     # the last image in this page is the MCCY logo, so get rid of it.
     pdf_imgs = driver.find_elements_by_tag_name('img')[:-1]
@@ -101,6 +110,9 @@ def process_temple(temple_name):
 
 
 driver = webdriver.Chrome()
+# set the implicity wait time to as long as 300 seconds
+# so that accidently long loading time of the web site
+# won't break the program
 driver.implicitly_wait(300)
 
 # Open the page and search for the temple
@@ -110,8 +122,10 @@ driver.get(
 
 with open('temple_list.txt', 'r') as temple_list:
     for temple in temple_list:
+        # ' '.join(temple.split()) to remove the trailing spaces and newline characters
         process_temple(' '.join(temple.split()))
         with open('downloaded.txt', 'a+') as f:
             f.write(temple)
 
+# close the browser window
 driver.close()
