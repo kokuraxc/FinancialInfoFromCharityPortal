@@ -11,6 +11,7 @@ def download_imgs(urls, folder_name):
     '''
     Given a list of image URLs, download them to the folder folder_name.
     '''
+    folder_name = folder_name.replace(':', '-')
     os.mkdir(folder_name)
     for i in range(len(urls)):
         file_name = urls[i].split('/')[-1].replace('%20', ' ')
@@ -39,9 +40,26 @@ def process_temple(temple_name):
 
     # click on "View Details" button
 
-    viewDetailedBtn = driver.find_element_by_id(
-        "ctl00_PlaceHolderMain_lstSearchResults_ctrl0_btnViewDetails")
-    viewDetailedBtn.click()
+    # //*[@id="ctl00_PlaceHolderMain_lstSearchResults_ctrl0_lblNameOfOrg"]
+    found_church = False
+    for i in range(5):
+        church_id = 'ctl00_PlaceHolderMain_lstSearchResults_ctrl' + str(
+            i) + '_lblNameOfOrg'
+        churchLabel = driver.find_element_by_id(church_id)
+        if churchLabel.text == temple_name:
+            found_church = True
+            viewDetailedBtn = driver.find_element_by_id(
+                "ctl00_PlaceHolderMain_lstSearchResults_ctrl" + str(i) +
+                "_btnViewDetails")
+            viewDetailedBtn.click()
+            break
+    if not found_church:
+        print('search for church', temple_name, 'failed')
+        return
+
+    # viewDetailedBtn = driver.find_element_by_id(
+    #     "ctl00_PlaceHolderMain_lstSearchResults_ctrl0_btnViewDetails")
+    # viewDetailedBtn.click()
 
     # switch to the newly popped up window/tab
     driver.switch_to.window(driver.window_handles[1])
@@ -84,6 +102,23 @@ def process_temple(temple_name):
     # finally:
     #     print("No alert to login SingPass")
 
+    # check if financial reports are available
+    receivedStatus = driver.find_element(
+        By.XPATH,
+        '//*[@id="ctl00_PlaceHolderMain_gvFinancialInformation"]/tbody/tr[2]/td[5]'
+    )
+    fileStatus = driver.find_element(
+        By.XPATH,
+        '//*[@id="ctl00_PlaceHolderMain_gvFinancialInformation"]/tbody/tr[2]/td[6]'
+    )
+    if receivedStatus.text == "Not received" or fileStatus.text == 'No file found':
+        print(temple_name, 'has no fiancial reports', fileStatus.text,
+              receivedStatus)
+        driver.close()
+        driver.switch_to.window(
+            driver.window_handles[0])  # get back to the search page
+        return
+
     # click on the "VIEW" button
     viewBtn = driver.find_element_by_id(
         "ctl00_PlaceHolderMain_gvFinancialInformation_ctl02_btViewload")
@@ -120,7 +155,7 @@ driver.get(
     "https://www.charities.gov.sg/_layouts/MCYSCPSearch/MCYSCPSearchResultsPage.aspx"
 )
 
-with open('temple_list.txt', 'r') as temple_list:
+with open('christianity.txt', 'r') as temple_list:
     for temple in temple_list:
         # ' '.join(temple.split()) to remove the trailing spaces and newline characters
         process_temple(' '.join(temple.split()))
