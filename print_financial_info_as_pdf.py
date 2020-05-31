@@ -21,12 +21,13 @@ def download_imgs(urls, folder_name):
 
 
 SAVED_PDF = 'D:/Downloads/Organization Profile.pdf'
-NEW_FOLDER = 'D:/GH/FinancialInfoFromCharityPortal/pdf_saves/'
+SAVE_FOLDER = 'D:/GH/FinancialInfoFromCharityPortal/pdf_saves/'
 
 
 def print_and_save_as_pdf(temple_name, info_type):
     driver.execute_script('window.print();')
-    os.rename(SAVED_PDF, NEW_FOLDER + temple_name.replace(':', '') + info_type)
+    os.rename(SAVED_PDF,
+              cur_org_folder + temple_name.replace(':', '') + info_type)
     # os.remove(SAVED_PDF)
 
 
@@ -128,12 +129,24 @@ driver.get(
     "https://www.charities.gov.sg/_layouts/MCYSCPSearch/MCYSCPSearchResultsPage.aspx"
 )
 
-with open('christianity.txt', 'r') as temple_list:
-    for temple in temple_list:
-        # ' '.join(temple.split()) to remove the trailing spaces and newline characters
-        process_temple(' '.join(temple.split()))
-        with open('print_as_pdf_done.txt', 'a+') as f:
-            f.write(temple)
+organization_list_files = ['Hindusm.txt', 'Islam-oldlist.txt', 'Others.txt']
+
+if not os.path.exists(SAVE_FOLDER):
+    os.mkdir(SAVE_FOLDER)
+cur_org_folder = None
+
+for list_file in organization_list_files:
+    with open(list_file, 'r') as temple_list:
+        cur_org_folder = SAVE_FOLDER + list_file[:-4] + '/'
+        if not os.path.exists(cur_org_folder):
+            os.mkdir(cur_org_folder)
+            print('cur_org_folder is:', cur_org_folder)
+
+        for temple in temple_list:
+            # ' '.join(temple.split()) to remove the trailing spaces and newline characters
+            process_temple(' '.join(temple.split()))
+            with open('print_as_pdf_done_' + list_file + '.txt', 'a+') as f:
+                f.write(temple)
 
 # close the browser window
 driver.close()
