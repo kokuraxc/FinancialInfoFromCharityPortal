@@ -5,20 +5,38 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import os
 import urllib.request
+from fpdf import FPDF
 
 
 def download_imgs(urls, folder_name):
     '''
     Given a list of image URLs, download them to the folder folder_name.
     '''
-    FOLDER_NAME = 'pdf_saves'
-
-    folder_name = FOLDER_NAME + '/' + folder_name.replace(':', '-')
+    # FOLDER_NAME = 'pdf_saves'
+    org = folder_name
+    folder_name = CUR_ORG_TYPE_FOLDER + '/' + folder_name.replace(':', '-')
     os.mkdir(folder_name)
     for i in range(len(urls)):
         file_name = urls[i].split('/')[-1].replace('%20', ' ')
         file_path = folder_name + '/' + file_name
         urllib.request.urlretrieve(urls[i], file_path)
+
+    # images to PDF
+    images = os.listdir(folder_name)
+    if len(images) == 0:
+        print(org, 'has no image files')
+    else:
+        pdf = FPDF()
+        image_files = True
+        for image in images:
+            if not 'jpeg' in image.lower():
+                image_files = False
+                break
+            pdf.add_page()
+            pdf.image(folder_name + '/' + image, 0, 0, 210, 297)
+        if not image_files:
+            print(org, 'has wrong format files')
+        pdf.output(folder_name + ".pdf", "F")
 
 
 def process_temple(temple_name):
@@ -54,10 +72,18 @@ def process_temple(temple_name):
         if (churchLabel.text.replace('.', '') == temple_name.replace(
                 '.', '')) and church_type.text == 'Charity Organisation':
             found_church = True
-            viewDetailedBtn = driver.find_element_by_id(
-                "ctl00_PlaceHolderMain_lstSearchResults_ctrl" + str(i) +
-                "_btnViewDetails")
-            viewDetailedBtn.click()
+            try:
+                # viewDetailedBtn = driver.find_element_by_id(
+                #     "ctl00_PlaceHolderMain_lstSearchResults_ctrl" + str(i) +
+                #     "_btnViewDetails")
+                viewDetailedBtn = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located(
+                        (By.ID, "ctl00_PlaceHolderMain_lstSearchResults_ctrl" +
+                         str(i) + "_btnViewDetails")))
+                viewDetailedBtn.click()
+            except:
+                print('####', temple_name, 'has no viewDetailedBtn')
+                found_church = False
             break
     if not found_church:
         print('search for church', temple_name, 'failed')
@@ -71,16 +97,16 @@ def process_temple(temple_name):
     driver.switch_to.window(driver.window_handles[1])
     # driver.switch_to_windows("Organisation Profile")
 
-    # click on "Financial Information"
-    fiTab = driver.find_element_by_link_text("Financial Information")
+    # click on "Annual Report"
+    fiTab = driver.find_element_by_link_text("Annual Report")
     print(fiTab.text)
     fiTab.click()
 
     # dismiss the alert pormpt
     driver.switch_to.alert.accept()
 
-    # click on "Financial Information" again
-    fiTab = driver.find_element_by_link_text("Financial Information")
+    # click on "Annual Report" again
+    fiTab = driver.find_element_by_link_text("Annual Report")
     print(fiTab.text)
     fiTab.click()
 
@@ -111,13 +137,11 @@ def process_temple(temple_name):
     # check if financial reports are available
     receivedStatus = driver.find_element(
         By.XPATH,
-        '//*[@id="ctl00_PlaceHolderMain_gvFinancialInformation"]/tbody/tr[2]/td[5]'
-    )
+        '//*[@id="ctl00_PlaceHolderMain_gvAnnualReport"]/tbody/tr[2]/td[2]')
     fileStatus = driver.find_element(
         By.XPATH,
-        '//*[@id="ctl00_PlaceHolderMain_gvFinancialInformation"]/tbody/tr[2]/td[6]'
-    )
-    if receivedStatus.text == "Not received" or fileStatus.text == 'No file found':
+        '//*[@id="ctl00_PlaceHolderMain_gvAnnualReport"]/tbody/tr[2]/td[3]')
+    if receivedStatus.text == "Not received" or fileStatus.text == 'No file found' or receivedStatus.text == '-':
         print(temple_name, 'has no fiancial reports', fileStatus.text,
               receivedStatus)
         driver.close()
@@ -127,7 +151,7 @@ def process_temple(temple_name):
 
     # click on the "VIEW" button
     viewBtn = driver.find_element_by_id(
-        "ctl00_PlaceHolderMain_gvFinancialInformation_ctl02_btViewload")
+        "ctl00_PlaceHolderMain_gvAnnualReport_ctl02_btViewload")
     viewBtn.click()
 
     # another windows will pop up
@@ -160,13 +184,26 @@ driver.implicitly_wait(300)
 driver.get(
     "https://www.charities.gov.sg/_layouts/MCYSCPSearch/MCYSCPSearchResultsPage.aspx"
 )
+org_list_folder = 'download/list/'
+org_list_list = os.listdir(org_list_folder)
+SAVE_FOLDER = 'download/'
+CUR_ORG_TYPE_FOLDER = None
 
-with open('Others.txt', 'r') as temple_list:
-    for temple in temple_list:
-        # ' '.join(temple.split()) to remove the trailing spaces and newline characters
-        process_temple(' '.join(temple.split()))
-        with open('downloaded.txt', 'a+') as f:
-            f.write(temple)
+for list_file in org_list_list:
+    list_file_path = org_list_folder + list_file
+    with open(list_file_path, 'r') as org_list:
+        cur_org_type_folder = SAVE_FOLDER + list_file[:-4] + '/'
+        CUR_ORG_TYPE_FOLDER = cur_org_type_folder
+        if not os.path.exists(cur_org_type_folder):
+            os.mkdir(cur_org_type_folder)
+            print('cur_org_folder is:', cur_org_type_folder)
+
+        for org in org_list:
+            # ' '.join(temple.split()) to remove the trailing spaces and newline characters
+            process_temple(' '.join(org.split()))
+            with open(SAVE_FOLDER + list_file[:-4] + '_downloaded.txt',
+                      'a+') as f:
+                f.write(org)
 
 # close the browser window
 driver.close()

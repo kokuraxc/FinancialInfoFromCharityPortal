@@ -1,8 +1,8 @@
 from fpdf import FPDF
 import os
+import pprint
 
-churchs_dir = 'churchs/'
-pdf_dir = 'PDFs/'
+org_family_dir = 'pdf_saves/'
 
 anchor = 'Abundant Grace Presbyterian Church'
 
@@ -25,26 +25,31 @@ churchlist = [
     'ASIA THEOLOGICAL CENTER',
 ]
 
-# for church in os.listdir(churchs_dir):
-# if church < anchor:
-#     continue
-for church in churchlist:
-    church_dir = churchs_dir + '/' + church
-    images = os.listdir(church_dir)
+org_family_list = os.listdir(org_family_dir)
+for org_family in org_family_list:
+    org_list = os.listdir(org_family_dir + org_family + '/')
+    pprint.pprint(org_list)
 
-    if len(images) == 0:
-        print(church, 'has no image files')
-        continue
+    # for church in os.listdir(churchs_dir):
+    # if church < anchor:
+    #     continue
+    for org in org_list:
+        org_dir = org_family_dir + org_family + '/' + org + '/'
+        images = os.listdir(org_dir)
 
-    pdf = FPDF()
-    image_files = True
-    for image in images:
-        if not 'jpeg' in image.lower():
-            image_files = False
-            break
-        pdf.add_page()
-        pdf.image(church_dir + '/' + image, 0, 0, 210, 297)
-    if not image_files:
-        print(church, 'has wrong format files')
-        continue
-    pdf.output(pdf_dir + church + ".pdf", "F")
+        if len(images) == 0:
+            print(org, 'has no image files')
+            continue
+
+        pdf = FPDF()
+        image_files = True
+        for image in images:
+            if not 'jpeg' in image.lower():
+                image_files = False
+                break
+            pdf.add_page()
+            pdf.image(org_dir + image, 0, 0, 210, 297)
+        if not image_files:
+            print(org, 'has wrong format files')
+            continue
+        pdf.output(org_family_dir + org_family + '/' + org + ".pdf", "F")
